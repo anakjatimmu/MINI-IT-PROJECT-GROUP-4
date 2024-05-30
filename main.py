@@ -1,7 +1,9 @@
 import tkinter as tk
+import sqlite3
 from tkinter import messagebox
 from ttkbootstrap import ttk, Style, PhotoImage, ttk
-from database import save_profile, get_profiles, update_profile, initialize_db,delete_profile
+from database import save_profile, get_profiles, update_profile, initialize_db,delete_profile,save_session
+from datetime import datetime
 
 
 # Set the default time for work and break intervals
@@ -36,8 +38,20 @@ class PomodoroTimer:
         self.settings_frame = ttk.Frame(self.main_frame)
         self.settings_frame.pack_forget()
 
-        self.home_frame = ttk.Frame(self.main_frame)
+        self.home_frame = ttk.Frame(self.main_frame, style='Custom.TFrame')
         self.home_frame.pack(fill="both", expand=True)
+        #self.home_frame.config(style='Custom.TFrame')
+
+        #self.style.configure('Custom.TFrame', background='#008000')
+
+        self.style.configure('Custom.TButton',
+                                    background='#008000',   
+                                    foreground='#FFFFFF',   
+                                    bordercolor='#008000',  
+                                    relief='flat',          
+                                    focuscolor='none')
+        self.style.map('Custom.TButton', background=[('active', '#90EE90')], foreground=[('active', 'white')])
+
 
         self.load_icons()
         self.create_widgets()
@@ -46,6 +60,7 @@ class PomodoroTimer:
         self.nav_frame_widgets()
         self.home_frame_widgets()
         self.settings_frame_widget()
+        self.create_insight_page()
     
     def load_icons(self):
         icon_paths = {
@@ -59,11 +74,14 @@ class PomodoroTimer:
             self.icons[name] = resize_icon
 
     def nav_frame_widgets(self):
-        self.home_button = ttk.Button(self.nav_frame, text="Home", width=10, command=self.show_home)
+        self.home_button = ttk.Button(self.nav_frame, text="Home", width=10, command=self.show_home, style='Custom.TButton')
         self.home_button.grid(row=0, column=0, padx=10)
 
         self.settings_button = ttk.Button(self.nav_frame, text="Settings", width=10, command=self.show_settings)
         self.settings_button.grid(row=0, column=1, padx=10)
+
+        self.insights_button = ttk.Button(self.nav_frame, text="Insights", width=10, command=self.show_insights)
+        self.insights_button.grid(row=0, column=2, padx=10)
     
     def home_frame_widgets(self):
         self.timer_minutes = WORK_TIME // 60 
@@ -75,6 +93,8 @@ class PomodoroTimer:
         self.start_button.place(relx=0.5, rely=0.55, anchor=tk.CENTER)
 
         self.is_work_time, self.pomodoros_completed, self.is_running = True, 0, False
+
+
 
 
     def settings_frame_widget(self):
@@ -108,8 +128,12 @@ class PomodoroTimer:
         self.long_break_entry.insert(0, str(LONG_BREAK_TIME // 60))
         self.long_break_entry.place(relx=0.62, rely=0.18,anchor=tk.CENTER)
 
-        self.save_button = ttk.Button(self.settings_frame, text="Save", command=self.save_settings)
-        self.save_button.place(relx=0.5, rely=0.35,anchor=tk.CENTER)
+        self.save_button = ttk.Button(self.settings_frame, text="Save To Timer", command=self.save_settings)
+        self.save_button.place(relx=0.4, rely=0.35,anchor=tk.CENTER)
+
+        self.save_button = ttk.Button(self.settings_frame, text="Save To Profile", command=self.save_profile)
+        self.save_button.place(relx=0.6, rely=0.35,anchor=tk.CENTER)
+
 
         # Profilee
         self.profile_label = ttk.Label(self.settings_frame, text="Profile Name:", font=("TKDefaultFont", 10,"bold"))
@@ -150,19 +174,61 @@ class PomodoroTimer:
         self.preadded_timers_listbox.bind("<<ListboxSelect>>", self.update_description_label)
 
         # Load Profile abangku
-        self.load_profiles_label = ttk.Label(self.settings_frame, text="Load Profiles", font=("TkDefaultFont", 18, "bold"))
+        self.load_profiles_label = ttk.Label(self.settings_frame, text="Your Timers", font=("TkDefaultFont", 18, "bold"))
         self.load_profiles_label.place(relx=0.5, rely=0.77, anchor=tk.CENTER)
 
         self.profile_listbox = tk.Listbox(self.settings_frame, height=4, width=40, bd=0, highlightthickness=0, font=("TkDefaultFont", 12))
         self.profile_listbox.place(relx=0.5, rely=0.85, anchor=tk.CENTER)
         self.load_profiles()
 
-        self.load_profile_button = ttk.Button(self.settings_frame, text="Load Profile", command=self.load_selected_profile, width=10)
-        self.load_profile_button.place(relx=0.55, rely=0.95, anchor=tk.CENTER)
+        self.load_profile_button = ttk.Button(self.settings_frame, text="Load Timers", command=self.load_selected_profile, width=10)
+        self.load_profile_button.place(relx=0.8, rely=0.5, anchor=tk.CENTER)
+
+        self.edit_profiles_button = ttk.Button(self.settings_frame, text="Edit Profiles", command=self.edit_profile, width=10)
+        self.edit_profiles_button.place(relx=0.55, rely=0.95, anchor=tk.CENTER)
 
         # Delete profile
         self.delete_button = ttk.Button(self.settings_frame, text="Delete Profile", command=self.delete_profile)
         self.delete_button.place(relx=0.45, rely=0.95, anchor=tk.CENTER)
+    
+    def edit_profile(self):
+        current_profile_name = self.profile_listbox.get(tk.ACTIVE)
+        new_profile_name = self.profile_entry.get().strip()
+        new_work_time = int(self.work_entry.get()) * 60
+        new_short_break_time = int(self.short_break_entry.get()) * 60
+        new_long_break_time = int(self.long_break_entry.get()) * 60
+
+        if current_profile_name and new_profile_name and new_profile_name != current_profile_name:
+            update_profile(current_profile_name, new_work_time, new_short_break_time, new_long_break_time, new_profile_name)
+            self.profile_listbox.delete(tk.ACTIVE)
+            self.profile_listbox.insert(tk.END, new_profile_name)
+            self.load_profiles()
+            messagebox.showinfo("Profile Updated", "Profile updated successfully!")
+        else:
+            messagebox.showerror("Error", "Please enter a new profile name.")
+    def create_insight_page(self):
+        self.insight_frame = ttk.Frame(self.main_frame)
+        
+        self.insight_label = ttk.Label(self.insight_frame, text="User Insights", font=("TkDefaultFont", 18, "bold"))
+        self.insight_label.pack(pady=10)
+
+        self.insight_tree = ttk.Treeview(self.insight_frame, columns=("date", "duration"), show="headings")
+        self.insight_tree.heading("date", text="Date")
+        self.insight_tree.heading("duration", text="Duration (mins)")
+        self.insight_tree.pack(fill="both", expand=True)
+
+        self.load_insight_data()
+    
+    def load_insight_data(self):
+        self.insight_tree.delete(*self.insight_tree.get_children())
+        conn = sqlite3.connect("pomodoro_timer.db")
+        c = conn.cursor()
+        c.execute("SELECT date, duration FROM sessions WHERE profile_name = ?", (self.username,))
+        sessions = c.fetchall()
+        conn.close()
+        for session in sessions:
+            self.insight_tree.insert("", "end", values=(session[0], session[1] // 60))
+    
 
     def delete_profile(self):
         selected_profile = self.profile_listbox.get(tk.ACTIVE)
@@ -193,6 +259,7 @@ class PomodoroTimer:
                     self.long_break_time = profile[3]
                     self.update_timer_label()
                     self.show_home()
+
                     self.work_entry.delete(0, tk.END)
                     self.work_entry.insert(0, str(self.work_time // 60))
 
@@ -247,14 +314,34 @@ class PomodoroTimer:
         self.home_frame.pack(fill="both", expand=True)
         if self.settings_frame.winfo_exists():
             self.settings_frame.pack_forget()
+            if self.insight_frame.winfo_exists():
+                self.insight_frame.pack_forget()
+            else:
+                pass
         else:
             pass
+    
+    def show_insights(self):
+        self.insight_frame.pack(fill="both", expand=True)
+        if self.home_frame.winfo_exists():
+            self.home_frame.pack_forget()
+            if self.settings_frame.winfo_exists():
+                self.settings_frame.pack_forget()
+            else:
+                pass
+        else:
+            pass
+            
     
     def show_settings(self):
         self.settings_frame.pack(fill="both",expand=True)
         
         if self.home_frame.winfo_exists():
             self.home_frame.pack_forget()
+            if self.insight_frame.winfo_exists():
+                self.insight_frame.pack_forget()
+            else:
+                pass
         else:
             pass
 
@@ -273,7 +360,8 @@ class PomodoroTimer:
             self.timer_label.config(text="{:02d}:{:02d}".format(self.timer_minutes, self.timer_seconds))
         except ValueError:
             messagebox.showerror("Error", "Please enter a valid number.")
-
+        messagebox.showinfo("Settings Saved", "Profile Added! ")
+    def save_profile(self):
         profile_name = self.profile_entry.get().strip()
         if profile_name:
             self.username = profile_name
@@ -329,6 +417,7 @@ class PomodoroTimer:
                     self.is_work_time = False
                     self.pomodoros_completed += 1
                     self.break_time = self.long_break_time if self.pomodoros_completed % 4 == 0 else self.short_break_time
+                    save_session(self.username,WORK_TIME)
                     messagebox.showinfo("Great job!" if self.pomodoros_completed % 4 == 0
                                         else "Good job!", "Take a long break and rest your mind."
                                         if self.pomodoros_completed % 4 == 0
