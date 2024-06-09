@@ -62,7 +62,6 @@ class PomodoroTimer:
     def create_widgets(self):
         self.settings_frame_widget()
         self.nav_frame_widgets()
-        self.create_insight_page()
         self.home_frame_widgets()
     
     def load_icons(self):
@@ -83,10 +82,6 @@ class PomodoroTimer:
         self.settings_button = ttk.Button(self.nav_frame, text="Settings", width=10, command=self.show_settings)
         self.settings_button.grid(row=0, column=1, padx=10)
 
-        self.insights_button = ttk.Button(self.nav_frame, text="Insights", width=10, command=self.show_insights)
-        self.insights_button.grid(row=0, column=2, padx=10)
-
-    
     def home_frame_widgets(self):
         self.style = ttk.Style()
         self.style.configure('TLabel', background = '#BA4949', foreground ='white')
@@ -283,29 +278,6 @@ class PomodoroTimer:
         else:
             messagebox.showerror("Error", "Please fill in all fields.")
 
-    def create_insight_page(self):
-        self.insight_frame = ttk.Frame(self.main_frame)
-        
-        self.insight_label = ttk.Label(self.insight_frame, text="User Insights", font=("TkDefaultFont", 18, "bold"))
-        self.insight_label.pack(pady=10)
-
-        self.insight_tree = ttk.Treeview(self.insight_frame, columns=("date", "duration"), show="headings")
-        self.insight_tree.heading("date", text="Date")
-        self.insight_tree.heading("duration", text="Duration (mins)")
-        self.insight_tree.pack(fill="both", expand=True)
-
-        self.load_insight_data()
-    
-    def load_insight_data(self):
-        self.insight_tree.delete(*self.insight_tree.get_children())
-        conn = sqlite3.connect("pomodoro_timer.db")
-        c = conn.cursor()
-        c.execute("SELECT date, duration FROM sessions WHERE profile_name = ?", (self.username,))
-        sessions = c.fetchall()
-        conn.close()
-        for session in sessions:
-            self.insight_tree.insert("", "end", values=(session[0], session[1] // 60))
-
     def delete_profile(self):
         selected_profile = self.settings_profile_listbox.get(tk.ACTIVE)
         if selected_profile:
@@ -405,34 +377,15 @@ class PomodoroTimer:
         self.home_frame.pack(fill="both", expand=True)
         if self.settings_frame.winfo_exists():
             self.settings_frame.pack_forget()
-            if self.insight_frame.winfo_exists():
-                self.insight_frame.pack_forget()
-            else:
-                pass
         else:
             pass
-    
-    def show_insights(self):
-        self.insight_frame.pack(fill="both", expand=True)
-        if self.home_frame.winfo_exists():
-            self.home_frame.pack_forget()
-            if self.settings_frame.winfo_exists():
-                self.settings_frame.pack_forget()
-            else:
-                pass
-        else:
-            pass
-            
+          
     
     def show_settings(self):
         self.settings_frame.pack(fill="both",expand=True)
         
         if self.home_frame.winfo_exists():
             self.home_frame.pack_forget()
-            if self.insight_frame.winfo_exists():
-                self.insight_frame.pack_forget()
-            else:
-                pass
         else:
             pass
 
