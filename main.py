@@ -41,6 +41,7 @@ class PomodoroTimer:
         self.home_frame.config(style='Custom.TFrame')
 
         self.task_frame = ttk.Frame(self.main_frame)
+        self.task_frame.config(style='Custom.TFrame')
         self.task_frame.pack_forget()
 
         self.style.configure('Custom.TFrame', background='#BA4949')
@@ -63,6 +64,7 @@ class PomodoroTimer:
         self.settings_frame_widget()
         self.nav_frame_widgets()
         self.home_frame_widgets()
+        self.task_frame_widgets()
     
     def load_icons(self):
         icon_paths = {
@@ -419,12 +421,11 @@ class PomodoroTimer:
     
     def show_task(self):
         self.task_frame.pack(fill="both", expand=True)
+        self.load_task()
         if self.home_frame.winfo_exists():
             self.home_frame.pack_forget()
         if self.settings_frame.winfo_exists():
             self.settings_frame.pack_forget()
-
-
 
     def save_settings(self):
         try:
@@ -535,6 +536,12 @@ class PomodoroTimer:
             self.task_entry.delete(0, tk.END)
         else:
             messagebox.showwarning("Warning", "Please enter a task!")
+        self.load_task()
+    def load_task(self):
+        self.task_listbox.delete(0, tk.END)
+        tasks = get_tasks(self.username)
+        for task in tasks:
+            self.task_listbox.insert(tk.END, task)
     def remove_task(self):
         try:
             selected_task_index = self.task_listbox.curselection()[0]
@@ -543,6 +550,7 @@ class PomodoroTimer:
                 self.edit_button.config(state=tk.DISABLED)
         except IndexError:
             messagebox.showwarning("Warning", "Please select a task to remove!")
+        self.load_task()
 
     def edit_task_timer(self):
         if not self.task_listbox.curselection():
@@ -591,6 +599,7 @@ class PomodoroTimer:
             self.edit_window.destroy()
         except ValueError:
             messagebox.showwarning("Invalid input", "Please enter valid integer values for the times.")
+        self.load_task()
     
     def update_timer_label(self):
         minutes, seconds = divmod(self.work_time, 60)
