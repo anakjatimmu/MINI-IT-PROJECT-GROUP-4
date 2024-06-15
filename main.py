@@ -1,10 +1,9 @@
 import tkinter as tk
 from tkinter import messagebox
 from ttkbootstrap import ttk, Style, PhotoImage, ttk
-from database1 import save_profile, get_profiles, update_profile, initialize_db,delete_profile, add_task, remove_task, get_tasks
+from database import save_profile, get_profiles, update_profile, initialize_db,delete_profile
 
 
-# Set the default time for work and break intervals
 WORK_TIME = 1 * 60
 SHORT_BREAK_TIME = 1 *60
 LONG_BREAK_TIME = 1 *60
@@ -39,6 +38,20 @@ class PomodoroTimer:
 
         self.home_frame = ttk.Frame(self.main_frame, style='Custom.TFrame')
         self.home_frame.pack(fill="both", expand=True)
+        self.home_frame.config(style='Custom.TFrame')
+
+        self.style.configure('Custom.TFrame', background='#BA4949')
+
+        self.style.configure('TButton', 
+                             foreground='#BA4949', 
+                             background='white',
+                             font =('TkDfaultFont',10,'bold'),
+                             padding = 10,
+                             borderwidth = 0)
+        self.style.map('TButton',
+               foregroun=[('!active', '#BA4949'), ('active', '#BA4949')],
+               background=[('!active', 'white'), ('active', 'white')])
+
 
         self.load_icons()
         self.create_widgets()
@@ -47,7 +60,6 @@ class PomodoroTimer:
         self.settings_frame_widget()
         self.nav_frame_widgets()
         self.home_frame_widgets()
-        self.settings_frame_widget()
     
     def load_icons(self):
         icon_paths = {
@@ -66,7 +78,7 @@ class PomodoroTimer:
 
         self.settings_button = ttk.Button(self.nav_frame, text="Settings", width=10, command=self.show_settings)
         self.settings_button.grid(row=0, column=1, padx=10)
-    
+
     def home_frame_widgets(self):
         self.style = ttk.Style()
         self.style.configure('TLabel', background = '#BA4949', foreground ='white')
@@ -84,32 +96,59 @@ class PomodoroTimer:
 
         self.is_work_time, self.pomodoros_completed, self.is_running = True, 0, False
 
-    
-        # TASK BUTTON/FRAME
-        self.task_frame = ttk.Frame(self.main_frame)
-        self.task_frame.pack_forget()
+        #**** PREADDED LABEL/ICON ****
+        self.preadded_timers_label = ttk.Label(self.home_frame, text="Preset Timers",font=("TkDefaulFont",18,"bold"))
+        self.preadded_timers_label.place(relx=0.85, rely=0.15, anchor=tk.CENTER)
 
-        self.task_button = ttk.Button(self.nav_frame, text="Task", width=10, command=self.show_task)
-        self.task_button.grid(row=0, column=2, padx=10)
+        #preadded_icon = self.icons["preadded_icon"]
+        self.settings_icon_label = ttk.Label(self.home_frame,image="")
+        self.settings_icon_label.place(relx=0.78, rely=0.15, anchor = tk.CENTER)
 
-            # TASK MANAGER GUI COMPONENTS
-        self.task_entry = tk.Entry(self.task_frame, width=50)
-        self.add_button = ttk.Button(self.task_frame, text="Add Task", width=10, command=self.add_task)
-        self.remove_button = ttk.Button(self.task_frame, text="Remove Task", width=12, command=self.remove_task)
-        self.task_listbox = tk.Listbox(self.task_frame, width=50)
-        self.edit_button = ttk.Button(self.task_frame, text="Edit Task Timer", width=15, command=self.edit_task_timer)
+        self.preadded_timers_listbox = tk.Listbox(self.home_frame)
+        self.preadded_timers_listbox.configure(background='#C76D6D',
+                                                   height=5,width=40,
+                                                   fg='white',
+                                                   font=('Arial',12), bd=2,
+                                                   selectbackground='white',selectforeground='#C76D6D',
+                                                   highlightthickness=0)
+            
+        self.preadded_timers_listbox.insert(1, "    Deep Work Session")
+        self.preadded_timers_listbox.insert(2, "    Light Work Session")
+        self.preadded_timers_listbox.insert(3, "    Exercise Session")
+        self.preadded_timers_listbox.insert(4, "    Meditation Session")
+        self.preadded_timers_listbox.place(relx=0.85, rely=0.25, anchor=tk.CENTER)
 
-        # Place GUI components on the window
-        self.task_entry.pack(pady=10)
-        self.add_button.pack(pady=5)
-        self.remove_button.pack(pady=5)
-        self.task_listbox.pack(pady=10)
-        self.edit_button.pack(pady=5)
+        self.timer_descriptions = {
+        "Deep Work Session": "1 hour of focused work followed by a 15-minute break.",
+        "Light Work Session": "45 minutes of work followed by a 5-minute break.",
+        "Exercise Session": "1-minute work intervals with 15-second breaks for exercise.",
+        "Meditation Session": "15 minutes of meditation followed by 5 minutes of stretching."
+        }
 
+        self.timer_description_label = ttk.Label(self.home_frame, text="", font=("TkDefaultFont", 12), wraplength=500)
+        self.timer_description_label.place(relx=0.85, rely=0.335, anchor=tk.CENTER)
+        
+        self.add_timer_button = ttk.Button(self.home_frame, text="Try Out!", command=self.add_selected_timer)
+        self.add_timer_button.place(relx=0.85,rely=0.38, anchor=tk.CENTER)
+        self.preadded_timers_listbox.bind("<<ListboxSelect>>", self.update_description_label)
 
+        self.load_profiles_label = ttk.Label(self.home_frame, text="Saved Timers", font=("TkDefaultFont", 18, "bold"))
+        self.load_profiles_label.place(relx=0.85, rely=0.45, anchor=tk.CENTER)
 
-           
+        self.home_profile_listbox = tk.Listbox(self.home_frame)
+        self.home_profile_listbox.place(relx=0.85, rely=0.55, anchor=tk.CENTER)
+        self.home_profile_listbox.configure(background='#C76D6D',
+                                                   height=5,width=40,
+                                                   fg='white',
+                                                   font=('Arial',12), bd=2,
+                                                   selectbackground='white',selectforeground='#C76D6D',
+                                                   highlightthickness=0)
+        
 
+        self.load_profiles_home()
+
+        self.load_profile_button = ttk.Button(self.home_frame, text="Load Timer", command=self.load_selected_profile)
+        self.load_profile_button.place(relx=0.85, rely=0.7, anchor=tk.CENTER)
 
     def settings_frame_widget(self):
 
@@ -343,8 +382,6 @@ class PomodoroTimer:
         self.home_frame.pack(fill="both", expand=True)
         if self.settings_frame.winfo_exists():
             self.settings_frame.pack_forget()
-        if self.task_frame.winfo_exists():
-            self.task_frame.pack_forget()
         else:
             pass
           
@@ -354,20 +391,8 @@ class PomodoroTimer:
         
         if self.home_frame.winfo_exists():
             self.home_frame.pack_forget()
-        if self.task_frame.winfo_exists():
-            self.task_frame.pack_forget()
         else:
             pass
-
-    
-    def show_task(self):
-        self.task_frame.pack(fill="both", expand=True)
-        if self.home_frame.winfo_exists():
-            self.home_frame.pack_forget()
-        if self.settings_frame.winfo_exists():
-            self.settings_frame.pack_forget()
-
-
 
     def save_settings(self):
         try:
@@ -469,88 +494,10 @@ class PomodoroTimer:
             minutes, seconds = divmod(self.work_time if self.is_work_time else self.break_time, 60)
             self.timer_label.config(text="{:02d}:{:02d}".format(minutes, seconds))
             self.root.after(1000, self.update_timer)
-
-
-    def add_task(self):
-        task = self.task_entry.get()
-        if task:
-            self.task_listbox.insert(tk.END, task)
-            self.task_entry.delete(0, tk.END)
-        else:
-            messagebox.showwarning("Warning", "Please enter a task!")
-    def remove_task(self):
-        try:
-            selected_task_index = self.task_listbox.curselection()[0]
-            self.task_listbox.delete(selected_task_index)
-            if not self.task_listbox.size():  # Disable edit button if no tasks are left
-                self.edit_button.config(state=tk.DISABLED)
-        except IndexError:
-            messagebox.showwarning("Warning", "Please select a task to remove!")
-
-    def edit_task_timer(self):
-        if not self.task_listbox.curselection():
-            messagebox.showwarning("Warning", "Please select a task to edit!")
-            return
-        
-        self.edit_window = tk.Toplevel(self.root)
-        self.edit_window.title("Edit Timer Settings")
-
-
-        # Calculate center position
-        window_width, window_height = 300, 350
-        screen_width = self.root.winfo_screenwidth()
-        screen_height = self.root.winfo_screenheight()
-        position_top = int(screen_height / 2 - window_height / 2)
-        position_right = int(screen_width / 2 - window_width / 2)
-        
-        self.edit_window.geometry(f'{window_width}x{window_height}+{position_right}+{position_top}')
-        
-        tk.Label(self.edit_window, text="Work Time (minutes):").pack(pady=5)
-        self.work_time_entry = tk.Entry(self.edit_window)
-        self.work_time_entry.pack(pady=5)
-        self.work_time_entry.insert(0, str(WORK_TIME // 60))
-        
-        tk.Label(self.edit_window, text="Short Break Time (minutes):").pack(pady=5)
-        self.short_break_time_entry = tk.Entry(self.edit_window)
-        self.short_break_time_entry.pack(pady=5)
-        self.short_break_time_entry.insert(0, str(SHORT_BREAK_TIME // 60))
-        
-        tk.Label(self.edit_window, text="Long Break Time (minutes):").pack(pady=5)
-        self.long_break_time_entry = tk.Entry(self.edit_window)
-        self.long_break_time_entry.pack(pady=5)
-        self.long_break_time_entry.insert(0, str(LONG_BREAK_TIME // 60))
-        
-        ttk.Button(self.edit_window, text="Save", command=self.save_timer_settings).pack(pady=20)
-
-    def save_timer_settings(self):
-        global WORK_TIME, SHORT_BREAK_TIME, LONG_BREAK_TIME
-        try:
-            WORK_TIME = int(self.work_time_entry.get()) * 60
-            SHORT_BREAK_TIME = int(self.short_break_time_entry.get()) * 60
-            LONG_BREAK_TIME = int(self.long_break_time_entry.get()) * 60
-            self.work_time = WORK_TIME
-            self.break_time = SHORT_BREAK_TIME
-            self.update_timer_label()
-            self.edit_window.destroy()
-        except ValueError:
-            messagebox.showwarning("Invalid input", "Please enter valid integer values for the times.")
-    
-    def update_timer_label(self):
-        minutes, seconds = divmod(self.work_time, 60)
-        self.timer_label.config(text="{:02d}:{:02d}".format(minutes, seconds))
-    
-    
-    def on_task_select(self, event):
-        try:
-            selected_task_index = self.task_listbox.curselection()[0]
-            self.edit_button.config(state=tk.NORMAL)
-        except IndexError:
-            self.edit_button.config(state=tk.DISABLED)
-
+           
     def run(self):
         self.root.mainloop()
 
 if __name__ == "__main__":
     pomodoro_timer = PomodoroTimer()
     pomodoro_timer.run()
-
