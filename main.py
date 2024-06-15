@@ -1,14 +1,11 @@
 import tkinter as tk
-import sqlite3
 from tkinter import messagebox
 from ttkbootstrap import ttk, Style, PhotoImage, ttk
-from database import save_profile, get_profiles, update_profile, initialize_db,delete_profile,save_session
-from datetime import datetime
-
+from database import save_profile, get_profiles, update_profile, initialize_db,delete_profile
 
 # Set the default time for work and break intervals
 WORK_TIME = 1 * 60
-SHORT_BREAK_TIME = 5 *60
+SHORT_BREAK_TIME = 1 *60
 LONG_BREAK_TIME = 1 *60
 
 class PomodoroTimer:
@@ -41,8 +38,8 @@ class PomodoroTimer:
 
         self.home_frame = ttk.Frame(self.main_frame, style='Custom.TFrame')
         self.home_frame.pack(fill="both", expand=True)
-        
         self.home_frame.config(style='Custom.TFrame')
+
         self.style.configure('Custom.TFrame', background='#BA4949')
 
         self.style.configure('TButton', 
@@ -76,7 +73,7 @@ class PomodoroTimer:
             self.icons[name] = resize_icon
 
     def nav_frame_widgets(self):
-        self.home_button = ttk.Button(self.nav_frame, text="Home", width=10, command=self.show_home, style='Custom.TButton')
+        self.home_button = ttk.Button(self.nav_frame, text="Home", width=10, command=self.show_home)
         self.home_button.grid(row=0, column=0, padx=10)
 
         self.settings_button = ttk.Button(self.nav_frame, text="Settings", width=10, command=self.show_settings)
@@ -85,6 +82,9 @@ class PomodoroTimer:
     def home_frame_widgets(self):
         self.style = ttk.Style()
         self.style.configure('TLabel', background = '#BA4949', foreground ='white')
+
+        self.status_label = ttk.Label(self.home_frame, text="", font=("TkDefaultFont", 14))
+        self.status_label.place(relx=0.5, rely=0.32, anchor=tk.CENTER)
 
         self.timer_minutes = WORK_TIME // 60 
         self.timer_seconds = WORK_TIME % 60
@@ -97,7 +97,7 @@ class PomodoroTimer:
         self.is_work_time, self.pomodoros_completed, self.is_running = True, 0, False
 
         #**** PREADDED LABEL/ICON ****
-        self.preadded_timers_label = ttk.Label(self.home_frame, text="Preset Timers",font=("TkDefaulFont",20,"bold"))
+        self.preadded_timers_label = ttk.Label(self.home_frame, text="Preset Timers",font=("TkDefaulFont",18,"bold"))
         self.preadded_timers_label.place(relx=0.85, rely=0.15, anchor=tk.CENTER)
 
         #preadded_icon = self.icons["preadded_icon"]
@@ -149,7 +149,6 @@ class PomodoroTimer:
 
         self.load_profile_button = ttk.Button(self.home_frame, text="Load Timer", command=self.load_selected_profile)
         self.load_profile_button.place(relx=0.85, rely=0.7, anchor=tk.CENTER)
-
 
     def settings_frame_widget(self):
 
@@ -222,7 +221,6 @@ class PomodoroTimer:
         self.delete_profile_button = ttk.Button(self.settings_frame, text="Delete Profile", command=self.delete_profile)
         self.delete_profile_button.place(relx=0.45, rely=0.75, anchor=tk.CENTER)
         self.delete_profile_button.config(state=tk.DISABLED)
-    
     def profile_selected(self, event):
         self.edit_profile_button.config(state=tk.NORMAL)
         self.delete_profile_button.config(state=tk.NORMAL)
@@ -265,9 +263,17 @@ class PomodoroTimer:
 
     def save_edits(self, selected_profile_name):
         new_profile_name = self.profile_name_entry.get()
-        work_time = int(self.work_time_entry.get()) * 60
-        short_break_time = int(self.short_break_time_entry.get()) * 60
-        long_break_time = int(self.long_break_time_entry.get()) * 60
+        work_time_entry = self.work_time_entry.get()
+        short_break_time_entry = self.short_break_time_entry.get()
+        long_break_time_entry = self.long_break_time_entry.get()
+
+        if not new_profile_name or not work_time_entry or not short_break_time_entry or not long_break_time_entry:
+            messagebox.showerror("Error", "Please fill in all fields.")
+            return
+        
+        work_time = int(work_time_entry) * 60
+        short_break_time = int(short_break_time_entry) * 60
+        long_break_time = int(long_break_time_entry) * 60
         
         if new_profile_name and work_time and short_break_time and long_break_time:
             update_profile(new_profile_name, work_time, short_break_time, long_break_time, selected_profile_name)
@@ -373,7 +379,6 @@ class PomodoroTimer:
         messagebox.showinfo("Timer Added", f"{selected_timer} added to settings!")
 
     def show_home(self):
-        
         self.home_frame.pack(fill="both", expand=True)
         if self.settings_frame.winfo_exists():
             self.settings_frame.pack_forget()
@@ -438,7 +443,7 @@ class PomodoroTimer:
 
     def start_timer(self):
         self.start_button.config(text="Stop", command=self.stop_timer)
-        self.is_running = True
+        self.is_running = True 
         self.update_timer()
     
     def stop_timer(self):
@@ -461,7 +466,7 @@ class PomodoroTimer:
             self.long_break_entry.insert(0, str(self.long_break_time // 60))
             minutes, seconds = divmod(self.work_time, 60)
             self.timer_label.config(text="{:02d}:{:02d}".format(minutes, seconds))
-
+            self.status_label.config(text="",background="")
 
     def update_timer(self):
         if self.is_running:
@@ -471,11 +476,11 @@ class PomodoroTimer:
                     self.is_work_time = False
                     self.pomodoros_completed += 1
                     self.break_time = self.long_break_time if self.pomodoros_completed % 4 == 0 else self.short_break_time
-                    save_session(self.username,WORK_TIME)
-                    messagebox.showinfo("Great job!" if self.pomodoros_completed % 4 == 0
+                    messagebox.showinfo("Great job!" if self.pomodoros_completed == 5
                                         else "Good job!", "Take a long break and rest your mind."
                                         if self.pomodoros_completed % 4 == 0
-                                        else "Take a short break and stretch your legs!")  
+                                        else "Take a short break and stretch your legs!")
+                self.status_label.config(text="   Work Time   ",foreground='white',background='#6F2B2B')  
             else:
                 self.break_time -= 1
                 if self.break_time == 0:
@@ -484,7 +489,8 @@ class PomodoroTimer:
                         self.work_time = int(self.work_entry.get()) * 60    
                     else:
                         self.work_time = WORK_TIME 
-                    messagebox.showinfo("Work Time", "Get back to work!")        
+                    messagebox.showinfo("Work Time", "Get back to work!")
+                self.status_label.config(text="   Break Time   " if self.pomodoros_completed % 4 != 0 else "   Long Break   ",foreground='white',background='#6F2B2B')        
             minutes, seconds = divmod(self.work_time if self.is_work_time else self.break_time, 60)
             self.timer_label.config(text="{:02d}:{:02d}".format(minutes, seconds))
             self.root.after(1000, self.update_timer)
