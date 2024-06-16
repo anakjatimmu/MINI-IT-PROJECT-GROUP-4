@@ -81,7 +81,7 @@ class PomodoroTimer:
             }
         self.icons = {}
         for name, path in icon_paths.items():
-            icon_image = PhotoImage(file=path)
+            icon_image = PhotoImage(file="")
             resize_icon = icon_image.subsample(8)
             self.icons[name] = resize_icon
 
@@ -623,20 +623,20 @@ class PomodoroTimer:
             self.status_label.config(text="",background="")
 
     def update_timer(self):
-     if self.is_running:
-        if self.is_work_time:
-            self.work_time -= 1
-            if self.work_time == 0:
-                self.is_work_time = False
-                self.pomodoros_completed += 1
-                self.break_time = self.long_break_time if self.pomodoros_completed % 4 == 0 else self.short_break_time
-                messagebox.showinfo("Great job!" if self.pomodoros_completed == 5
+        if self.is_running:
+            if self.is_work_time:
+                self.work_time -= 1
+                if self.work_time == 0:
+                   self.is_work_time = False
+                   self.pomodoros_completed += 1
+                   self.check_task_completion()  # Check if any task is completed
+                   self.break_time = self.long_break_time if self.pomodoros_completed % 4 == 0 else self.short_break_time
+                   messagebox.showinfo("Great job!" if self.pomodoros_completed == 5
                                     else "Good job!", "Take a long break and rest your mind."
                                     if self.pomodoros_completed % 4 == 0
                                     else "Take a short break and stretch your legs!")
-                self.update_missions()
-            self.status_label.config(text="   Work Time   ", foreground='white', background='#6F2B2B')
-        else:
+                self.status_label.config(text="   Work Time   ", foreground='white', background='#6F2B2B')
+            else:
             self.break_time -= 1
             if self.break_time == 0:
                 self.is_work_time = True
@@ -646,9 +646,11 @@ class PomodoroTimer:
                     self.work_time = WORK_TIME
                 messagebox.showinfo("Work Time", "Get back to work!")
             self.status_label.config(text="   Break Time   " if self.pomodoros_completed % 4 != 0 else "   Long Break   ", foreground='white', background='#6F2B2B')
+        
         minutes, seconds = divmod(self.work_time if self.is_work_time else self.break_time, 60)
         self.timer_label.config(text="{:02d}:{:02d}".format(minutes, seconds))
         self.root.after(1000, self.update_timer)
+
 
     
     def load_tasks(self):
@@ -764,18 +766,21 @@ class PomodoroTimer:
         self.show_achievement()
         self.toggle_button.config(state=tk.NORMAL)
 
-    def update_missions(self):
-     if self.pomodoros_completed == 1:
-        self.complete_mission(0)
-     if self.pomodoros_completed == 3:
-        self.complete_mission(1)
+    def check_task_completion(self):
+    # Iterate through missions and mark them as completed if conditions are met
+     for index, mission in enumerate(self.missions):
+        if mission == "Complete 1 Pomodoro session" and self.pomodoros_completed >= 1:
+            self.mark_task_completed(index)
+        elif mission == "Complete 3 pomodoro session" and self.pomodoros_completed >= 3:
+            self.mark_task_completed(index)
+        # Add more conditions for other missions as needed
 
-    def complete_mission(self, mission_index):
-        mission_text = self.missions[mission_index]
-        self.listbox_missions.append(mission_text)
-        button = tk.Button(self.root, text=f"Claim Reward for: {mission_text}")
-        button.pack()
-        self.reward_buttons.append(button)
+    def mark_task_completed(self, index):
+    # Update the GUI to mark the task as completed
+     self.listbox_missions.itemconfig(index, {'bg': 'green', 'fg': 'black'})
+     self.reward_buttons[index].configure(state=tk.NORMAL)
+
+
 
     def toggle_lock(self):
         if self.is_locked:
