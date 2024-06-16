@@ -1,6 +1,7 @@
 import tkinter as tk
 from tkinter import messagebox
 from ttkbootstrap import ttk, Style, PhotoImage, ttk
+from PIL import Image, ImageTk
 from database import save_profile, get_profiles, update_profile, initialize_db,delete_profile, add_task, remove_task, get_tasks
 
 
@@ -44,6 +45,11 @@ class PomodoroTimer:
         self.task_frame.config(style='Custom.TFrame')
         self.task_frame.pack_forget()
 
+        self.reward_frame = ttk.Frame(self.main_frame)
+        self.reward_frame.config(style='Custom.TFrame')
+        self.reward_frame.pack_forget()
+
+
         self.style.configure('Custom.TFrame', background='#BA4949')
 
         self.style.configure('TButton', 
@@ -65,6 +71,7 @@ class PomodoroTimer:
         self.nav_frame_widgets()
         self.home_frame_widgets()
         self.task_frame_widgets()
+        self.reward_frame_widget()
     
     def load_icons(self):
         icon_paths = {
@@ -73,7 +80,7 @@ class PomodoroTimer:
             }
         self.icons = {}
         for name, path in icon_paths.items():
-            icon_image = PhotoImage(file=path)
+            icon_image = PhotoImage(file="")
             resize_icon = icon_image.subsample(8)
             self.icons[name] = resize_icon
 
@@ -86,6 +93,10 @@ class PomodoroTimer:
 
         self.task_button = ttk.Button(self.nav_frame, text="Task", width=10, command=self.show_task)
         self.task_button.grid(row=0, column=2, padx=10)
+
+        self.reward_button = ttk.Button(self.nav_frame, text="Rewards", width=10, command=self.show_reward)
+        self.reward_button.grid(row=0, column=3, padx=10)
+
     def home_frame_widgets(self):
         self.style = ttk.Style()
         self.style.configure('TLabel', background = '#BA4949', foreground ='white')
@@ -156,6 +167,48 @@ class PomodoroTimer:
 
         self.load_profile_button = ttk.Button(self.home_frame, text="Load Timer", command=self.load_selected_profile)
         self.load_profile_button.place(relx=0.85, rely=0.7, anchor=tk.CENTER)
+
+        # Listbox to display tasks
+        self.listbox_missions = tk.Listbox(self.home_frame, height=10, width=30, font=("TkDefaultFont", 12))
+
+        self.missions = ["Complete 1 Pomodoro session", "Complete 3 pomodoro session","Use this app for 3 day a row","Use this app for 1 week a row",
+                         "Use this app for 12 hours straight", "Use this app for 24 hours straight", "Complete 10 pomodoro sessions a day", "Use this app for 96 hours straight",
+                         "Use this app for 365 day a row ", "Use this app for 8760 hours straight"]
+        self.listbox_missions = []
+        self.reward_buttons = []
+
+        for idx, mission in enumerate(self.missions):
+            listbox_missions = tk.Listbox(self.home_frame, height=2, width=47, font=("TkDefaultFont", 12))
+            listbox_missions.insert(tk.END, mission)
+            listbox_missions.place(relx=0.2, rely=0.25 + idx * 0.055, anchor=tk.CENTER)
+            self.listbox_missions.append(listbox_missions)
+
+            reward_button = ttk.Button(self.home_frame, text="Claim Reward", command=lambda idx=idx: self.claim_reward(idx), state=tk.DISABLED)
+            reward_button.place(relx=0.3, rely=0.246 + idx * 0.055555, anchor=tk.CENTER)
+            self.reward_buttons.append(reward_button)
+
+        # Lock/Unlock image functionality in task page
+        self.lock_image_path = "lock.png"
+        self.unlock_image_path = "badge 1.png"
+
+        # Load and resize lock image
+        self.lock_image = Image.open(self.lock_image_path)
+        self.lock_image.thumbnail((100, 100))  # Resize lock image to 100x100 pixels
+        self.lock_photo = ImageTk.PhotoImage(self.lock_image)
+
+        # Load and resize unlock image
+        self.unlock_image = Image.open(self.unlock_image_path)
+        self.unlock_image.thumbnail((100, 100))  # Resize unlock image to 100x100 pixels
+        self.unlock_photo = ImageTk.PhotoImage(self.unlock_image)
+
+        self.is_locked = True
+
+        # Image label for lock image
+        self.image_label = tk.Label(self.task_frame, image=self.lock_photo)
+        self.image_label.pack(pady=20)
+
+        self.toggle_button = ttk.Button(self.task_frame, text="Unlock", command=self.toggle_lock, width=10, state=tk.DISABLED)
+        self.toggle_button.pack(pady=10) 
     
     def task_frame_widgets(self):
         self.task_entry = tk.Entry(self.task_frame, width=50)
@@ -404,6 +457,9 @@ class PomodoroTimer:
             self.settings_frame.pack_forget()
         if self.task_frame.winfo_exists():
             self.task_frame.pack_forget()
+        if self.reward_frame.winfo_exists():
+            self.reward_frame.pack_forget()
+    
         else:
             pass
           
@@ -415,6 +471,8 @@ class PomodoroTimer:
             self.home_frame.pack_forget()
         if self.task_frame.winfo_exists():
             self.task_frame.pack_forget()
+        if self.reward_frame.winfo_exists():
+            self.reward_frame.pack_forget()
         else:
             pass
 
@@ -426,6 +484,26 @@ class PomodoroTimer:
             self.home_frame.pack_forget()
         if self.settings_frame.winfo_exists():
             self.settings_frame.pack_forget()
+        if self.reward_frame.winfo_exists():
+            self.reward_frame.pack_forget()
+
+        if self.listbox_missions[0].itemcget(0, "bg") == 'green':
+            self.toggle_button.config(state=tk.NORMAL)
+        else:
+            self.toggle_button.config(state=tk.DISABLED)
+
+
+    def show_reward(self):
+        self.reward_frame.pack(fill="both", expand=True)
+        self.load_reward()
+        if self.home_frame.winfo_exists():
+            self.home_frame.pack_forget()
+        if self.settings_frame.winfo_exists():
+            self.settings_frame.pack_forget()
+        if self.task_frame.winfo_exists():
+            self.task_frame.pack_forget()
+        
+
 
     def save_settings(self):
         try:
@@ -527,7 +605,10 @@ class PomodoroTimer:
             minutes, seconds = divmod(self.work_time if self.is_work_time else self.break_time, 60)
             self.timer_label.config(text="{:02d}:{:02d}".format(minutes, seconds))
             self.root.after(1000, self.update_timer)
-
+        else: 
+            # Auto-mark task as completed
+            self.listbox_missions[self.pomodoros_completed - 1].config(bg='green')  
+            self.reward_buttons[self.pomodoros_completed - 1].config(state=tk.NORMAL)  
 
     def add_task(self):
         task = self.task_entry.get()
@@ -612,6 +693,20 @@ class PomodoroTimer:
             self.edit_button.config(state=tk.NORMAL)
         except IndexError:
             self.edit_button.config(state=tk.DISABLED)
+
+    def claim_reward(self, idx):
+        messagebox.showinfo("Reward Claimed", f"You have claimed your reward for task {idx + 1}!")
+        self.reward_buttons[idx].config(state=tk.DISABLED)  # Disable the button again after claiming reward
+        self.show_task()
+        self.toggle_button.config(state=tk.NORMAL)
+
+    def toggle_lock(self):
+        if self.is_locked:
+            self.image_label.config(image=self.unlock_photo)
+        else:
+            self.image_label.config(image=self.lock_photo)
+            self.toggle_button.config(text="Unlock")
+        self.is_locked = not self.is_locked
 
     def run(self):
         self.root.mainloop()
