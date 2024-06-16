@@ -194,28 +194,30 @@ class PomodoroTimer:
         self.achievement_label = ttk.Label(self.achievement_frame, text="Achievement", font=("TkDefaultFont", 20, "bold"))
         self.achievement_label.place(relx=0.5, rely=0.02, anchor=tk.CENTER)
 
-        # Lock/Unlock image functionality in task page
         self.lock_image_path = "lock.png"
         self.unlock_image_path = "badge 1.png"
 
         # Load and resize lock image
         self.lock_image = Image.open(self.lock_image_path)
-        self.lock_image.thumbnail((100, 100))  # Resize lock image to 100x100 pixels
+        self.lock_image.thumbnail((300, 300))  # Resize lock image to 100x100 pixels
         self.lock_photo = ImageTk.PhotoImage(self.lock_image)
 
         # Load and resize unlock image
         self.unlock_image = Image.open(self.unlock_image_path)
-        self.unlock_image.thumbnail((100, 100))  # Resize unlock image to 100x100 pixels
+        self.unlock_image.thumbnail((300, 300)) 
         self.unlock_photo = ImageTk.PhotoImage(self.unlock_image)
 
         self.is_locked = True
 
-        # Image label for lock image
+      
         self.image_label = tk.Label(self.achievement_frame, image=self.lock_photo)
-        self.image_label.pack(pady=20)
-
-        self.toggle_button = ttk.Button(self.achievement_frame, text="Unlock", command=self.toggle_lock, width=10, state=tk.DISABLED)
-        self.toggle_button.pack(pady=10)
+        self.image_label.grid(row=0, column=0, padx=10, pady=10, sticky='w') 
+        # Toggle button
+        self.toggle_button_text = tk.StringVar()
+        self.toggle_button_text.set("Unlock")
+        self.toggle_button = ttk.Button(self.achievement_frame, textvariable=self.toggle_button_text, command=self.toggle_lock, width=10)
+        self.toggle_button.grid(row=0, column=1) 
+        self.toggle_button.config(state=tk.DISABLED)  
  
     
     def task_frame_widgets(self):
@@ -629,23 +631,26 @@ class PomodoroTimer:
                 if self.work_time == 0:
                    self.is_work_time = False
                    self.pomodoros_completed += 1
-                   self.check_task_completion()  # Check if any task is completed
                    self.break_time = self.long_break_time if self.pomodoros_completed % 4 == 0 else self.short_break_time
                    messagebox.showinfo("Great job!" if self.pomodoros_completed == 5
-                                    else "Good job!", "Take a long break and rest your mind."
-                                    if self.pomodoros_completed % 4 == 0
-                                    else "Take a short break and stretch your legs!")
+                                      else "Good job!", "Take a long break and rest your mind."
+                                      if self.pomodoros_completed % 4 == 0
+                                      else "Take a short break and stretch your legs!")
+                   self.listbox_missions[self.pomodoros_completed - 1].config(bg='green')  # Change color of completed task
+                   self.reward_buttons[self.pomodoros_completed - 1].config(state=tk.NORMAL)
+                   if self.pomodoros_completed >= 1:
+                        self.reward_buttons[0].config(state=tk.NORMAL)  
                 self.status_label.config(text="   Work Time   ", foreground='white', background='#6F2B2B')
             else:
-            self.break_time -= 1
-            if self.break_time == 0:
-                self.is_work_time = True
-                if int(self.work_entry.get()) * 60 != WORK_TIME:
-                    self.work_time = int(self.work_entry.get()) * 60
-                else:
-                    self.work_time = WORK_TIME
-                messagebox.showinfo("Work Time", "Get back to work!")
-            self.status_label.config(text="   Break Time   " if self.pomodoros_completed % 4 != 0 else "   Long Break   ", foreground='white', background='#6F2B2B')
+                self.break_time -= 1
+                if self.break_time == 0:
+                    self.is_work_time = True
+                    if int(self.work_entry.get()) * 60 != WORK_TIME:
+                        self.work_time = int(self.work_entry.get()) * 60
+                    else:
+                        self.work_time = WORK_TIME
+                    messagebox.showinfo("Work Time", "Get back to work!")
+                self.status_label.config(text="   Break Time   " if self.pomodoros_completed % 4 != 0 else "   Long Break   ", foreground='white', background='#6F2B2B')
         
         minutes, seconds = divmod(self.work_time if self.is_work_time else self.break_time, 60)
         self.timer_label.config(text="{:02d}:{:02d}".format(minutes, seconds))
@@ -761,34 +766,24 @@ class PomodoroTimer:
             self.edit_button.config(state=tk.DISABLED)
     
     def claim_reward(self, idx):
-        messagebox.showinfo("Achievement Claimed", f"You have claimed your reward for task {idx + 1}!")
-        self.reward_buttons[idx].config(state=tk.DISABLED)  # Disable the button again after claiming reward
-        self.show_achievement()
-        self.toggle_button.config(state=tk.NORMAL)
+            messagebox.showinfo("Achievement Claimed", f"You have claimed your reward for task {idx + 1}!")
+            self.show_task()
+            self.reward_buttons[idx].config(state=tk.DISABLED)  
+            self.toggle_button.config(state=tk.NORMAL) 
+           
 
     def check_task_completion(self):
-    # Iterate through missions and mark them as completed if conditions are met
      for index, mission in enumerate(self.missions):
         if mission == "Complete 1 Pomodoro session" and self.pomodoros_completed >= 1:
             self.mark_task_completed(index)
         elif mission == "Complete 3 pomodoro session" and self.pomodoros_completed >= 3:
             self.mark_task_completed(index)
-        # Add more conditions for other missions as needed
-
-    def mark_task_completed(self, index):
-    # Update the GUI to mark the task as completed
-     self.listbox_missions.itemconfig(index, {'bg': 'green', 'fg': 'black'})
-     self.reward_buttons[index].configure(state=tk.NORMAL)
-
-
 
     def toggle_lock(self):
-        if self.is_locked:
-            self.image_label.config(image=self.unlock_photo)
-        else:
-            self.image_label.config(image=self.lock_photo)
-            self.toggle_button.config(text="Unlock")
         self.is_locked = not self.is_locked
+        self.toggle_button_text.set("Unlock")
+        self.image_label.config(image=self.lock_photo if self.is_locked else self.unlock_photo)
+        self.toggle_button.config(state=tk.DISABLED) 
 
     def run(self):
         self.root.mainloop()
