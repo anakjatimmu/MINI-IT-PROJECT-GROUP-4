@@ -1,7 +1,7 @@
 import tkinter as tk
 from tkinter import messagebox
 from ttkbootstrap import ttk, Style, PhotoImage, ttk
-from database import save_profile, get_profiles, update_profile, initialize_db,delete_profile, add_task, remove_task, get_tasks
+from database import save_profile, get_profiles, update_profile, initialize_db,delete_profile, save_task, delete_task, get_tasks,update_task
 
 
 WORK_TIME = 1 * 60
@@ -46,6 +46,8 @@ class PomodoroTimer:
 
         self.style.configure('Custom.TFrame', background='#BA4949')
 
+        self.style.configure('TLabel', background = '#BA4949', foreground ='white')
+
         self.style.configure('TButton', 
                              foreground='#BA4949', 
                              background='white',
@@ -87,8 +89,6 @@ class PomodoroTimer:
         self.task_button = ttk.Button(self.nav_frame, text="Task", width=10, command=self.show_task)
         self.task_button.grid(row=0, column=2, padx=10)
     def home_frame_widgets(self):
-        self.style = ttk.Style()
-        self.style.configure('TLabel', background = '#BA4949', foreground ='white')
 
         self.status_label = ttk.Label(self.home_frame, text="", font=("TkDefaultFont", 14))
         self.status_label.place(relx=0.5, rely=0.32, anchor=tk.CENTER)
@@ -158,17 +158,60 @@ class PomodoroTimer:
         self.load_profile_button.place(relx=0.85, rely=0.7, anchor=tk.CENTER)
     
     def task_frame_widgets(self):
-        self.task_entry = tk.Entry(self.task_frame, width=50)
-        self.add_button = ttk.Button(self.task_frame, text="Add Task", width=10, command=self.add_task)
-        self.remove_button = ttk.Button(self.task_frame, text="Remove Task", width=12, command=self.remove_task)
-        self.task_listbox = tk.Listbox(self.task_frame, width=50)
-        self.edit_button = ttk.Button(self.task_frame, text="Edit Task Timer", width=15, command=self.edit_task_timer)
 
-        self.task_entry.pack(pady=10)
-        self.add_button.pack(pady=5)
-        self.remove_button.pack(pady=5)
-        self.task_listbox.pack(pady=10)
-        self.edit_button.pack(pady=5)
+        self.task_label = ttk.Label(self.task_frame, text="Task", font=("TkDefaultFont", 20, "bold"))
+        self.task_label.place(relx=0.5, rely=0.08, anchor=tk.CENTER)
+
+        self.task_description_label = ttk.Label(self.task_frame, text="Create a task for future needs", font=("TkDefaultFont", 12, ))
+        self.task_description_label.place(relx=0.5, rely=0.13, anchor=tk.CENTER)
+
+        self.task_name_label = ttk.Label(self.task_frame, text="Task Name :", font=("TkDefaultFont",12))
+        self.task_name_label.place(relx=0.4, rely=0.2, anchor=tk.CENTER)
+        self.task_entry = tk.Entry(self.task_frame, width=50)
+        self.task_entry.place(relx=0.55, rely=0.2, anchor=tk.CENTER)
+
+        self.work_task_label = ttk.Label(self.task_frame, text="Work Time (mins) :", font=("TKDefaultFont",12))
+        self.work_task_label.place(relx=0.43, rely=0.25,anchor=tk.CENTER)
+        self.work_task_entry = ttk.Entry(self.task_frame)
+        self.work_task_entry.insert(0, str(WORK_TIME//60))
+        self.work_task_entry.place(relx=0.55, rely=0.25,anchor=tk.CENTER)
+
+        
+
+        self.short_break_task_label = ttk.Label (self.task_frame, text="Short Break Time (mins) :",font=("TKDefaultFont",12))
+        self.short_break_task_label.place(relx=0.43, rely=0.32,anchor=tk.CENTER)
+        self.short_break_task_entry = ttk.Entry(self.task_frame)
+        self.short_break_task_entry.insert(0, str(SHORT_BREAK_TIME // 60))
+        self.short_break_task_entry.place(relx=0.55, rely=0.32,anchor=tk.CENTER)
+        
+        self.long_break_task_label = ttk.Label(self.task_frame, text="Long Break Time (mins) :",font=("TKDefaultFont",12))
+        self.long_break_task_label.place(relx=0.43, rely=0.39,anchor=tk.CENTER)
+        self.long_break_task_entry = ttk.Entry(self.task_frame)
+        self.long_break_task_entry.insert(0, str(LONG_BREAK_TIME // 60))
+        self.long_break_task_entry.place(relx=0.55, rely=0.39,anchor=tk.CENTER)
+
+        self.add_task_button = ttk.Button(self.task_frame, text="Add Task", command=self.add_task)
+        self.add_task_button.place(relx=0.5, rely=0.5,anchor=tk.CENTER)
+
+        self.task_label = ttk.Label(self.task_frame, text="Saved Task", font=("TkDefaultFont", 20, "bold"))
+        self.task_label.place(relx=0.5, rely=0.6, anchor=tk.CENTER)
+
+        self.task_listbox = tk.Listbox(self.task_frame)
+        self.task_listbox.configure(background='#C76D6D',
+                                                   height= 6, width=50,
+                                                   fg='white',
+                                                   font=('Arial',12), bd=2,
+                                                   selectbackground='white',selectforeground='#C76D6D',
+                                                   highlightthickness=0)
+        self.task_listbox.place(relx=0.5, rely=0.75, anchor=tk.CENTER)
+        self.load_tasks()
+
+        self.remove_task_button = ttk.Button(self.task_frame, text="Remove Task", command=self.delete_task)
+        self.remove_task_button.place(relx=0.45, rely=0.9, anchor=tk.CENTER)
+        
+        self.edit_button = ttk.Button(self.task_frame, text="Edit Task Timer", command=self.edit_task_timer)
+        self.edit_button.place(relx=0.55, rely=0.9, anchor = tk.CENTER)
+
 
     def settings_frame_widget(self):
 
@@ -183,7 +226,7 @@ class PomodoroTimer:
         self.settings_icon_label.place(relx=0.46, rely=0.049, anchor = tk.CENTER)
 
         # Timer Entriessss
-        self.work_label = ttk.Label(self.settings_frame, text="Work Time (mins) :", font=("TKDefaultFont",11))
+        self.work_label = ttk.Label(self.settings_frame, text="Work Time (mins) :", font=("TKDefaultFont",12))
         self.work_label.place(relx=0.43, rely=0.15,anchor=tk.CENTER)
         self.work_entry = ttk.Entry(self.settings_frame)
         self.work_entry.insert(0, str(WORK_TIME//60))
@@ -191,13 +234,13 @@ class PomodoroTimer:
 
         
 
-        self.short_break_label = ttk.Label (self.settings_frame, text="Short Break Time (mins) :",font=("TKDefaultFont",11))
+        self.short_break_label = ttk.Label (self.settings_frame, text="Short Break Time (mins) :",font=("TKDefaultFont",12))
         self.short_break_label.place(relx=0.43, rely=0.22,anchor=tk.CENTER)
         self.short_break_entry = ttk.Entry(self.settings_frame)
         self.short_break_entry.insert(0, str(SHORT_BREAK_TIME // 60))
         self.short_break_entry.place(relx=0.55, rely=0.22,anchor=tk.CENTER)
         
-        self.long_break_label = ttk.Label(self.settings_frame, text="Long Break Time (mins) :",font=("TKDefaultFont",11))
+        self.long_break_label = ttk.Label(self.settings_frame, text="Long Break Time (mins) :",font=("TKDefaultFont",12))
         self.long_break_label.place(relx=0.43, rely=0.29,anchor=tk.CENTER)
         self.long_break_entry = ttk.Entry(self.settings_frame)
         self.long_break_entry.insert(0, str(LONG_BREAK_TIME // 60))
@@ -233,13 +276,13 @@ class PomodoroTimer:
         self.load_profiles_settings()
 
         self.edit_profile_button = ttk.Button(self.settings_frame, text="Edit Profiles", command=self.edit_profile)
-        self.edit_profile_button.place(relx=0.55, rely=0.75, anchor=tk.CENTER)
+        self.edit_profile_button.place(relx=0.55, rely=0.77, anchor=tk.CENTER)
         self.edit_profile_button.config(state=tk.DISABLED)
 
 
         # Delete profile
         self.delete_profile_button = ttk.Button(self.settings_frame, text="Delete Profile", command=self.delete_profile)
-        self.delete_profile_button.place(relx=0.45, rely=0.75, anchor=tk.CENTER)
+        self.delete_profile_button.place(relx=0.45, rely=0.77, anchor=tk.CENTER)
         self.delete_profile_button.config(state=tk.DISABLED)
     def profile_selected(self, event):
         self.edit_profile_button.config(state=tk.NORMAL)
@@ -250,6 +293,7 @@ class PomodoroTimer:
         if selected_profile_name:
             self.edit_window = tk.Toplevel(self.root)
             self.edit_window.title("Edit Profile")
+            self.edit_window.configure(background='#BA4949')
 
             window_width, window_height = 300, 350
             screen_width = self.root.winfo_screenwidth()
@@ -258,26 +302,28 @@ class PomodoroTimer:
             position_right = int(screen_width / 2 - window_width / 2)
 
             self.edit_window.geometry(f'{window_width}x{window_height}+{position_right}+{position_top}')
+
             try:
-                tk.Label(self.edit_window, text="Work Time (minutes):").pack(pady=5)
+                ttk.Label(self.edit_window, text="Work Time (minutes):").pack(pady=5)
                 self.work_time_entry = tk.Entry(self.edit_window)
+
                 self.work_time_entry.pack(pady=5)
 
-                tk.Label(self.edit_window, text="Short Break Time (minutes):").pack(pady=5)
+                ttk.Label(self.edit_window, text="Short Break Time (minutes):").pack(pady=5)
                 self.short_break_time_entry = tk.Entry(self.edit_window)
                 self.short_break_time_entry.pack(pady=5)
 
-                tk.Label(self.edit_window, text="Long Break Time (minutes):").pack(pady=5)
+                ttk.Label(self.edit_window, text="Long Break Time (minutes):").pack(pady=5)
                 self.long_break_time_entry = tk.Entry(self.edit_window)
                 self.long_break_time_entry.pack(pady=5)
 
-                tk.Label(self.edit_window, text="Profile Name:").pack(pady=5)
+                ttk.Label(self.edit_window, text="Profile Name:").pack(pady=5)
                 self.profile_name_entry = tk.Entry(self.edit_window)
                 self.profile_name_entry.pack(pady=5)
             except ValueError:
                 messagebox.showerror("Error", "Please enter a valid number.")
 
-            tk.Button(self.edit_window, text="Save Changes", command=lambda: self.save_edits(selected_profile_name)).pack(pady=10)
+            ttk.Button(self.edit_window, text="Save Changes", command=lambda: self.save_edits(selected_profile_name)).pack(pady=10)
         else:
             messagebox.showwarning("No Profile Selected", "Please select a profile to edit.")
 
@@ -421,7 +467,6 @@ class PomodoroTimer:
     
     def show_task(self):
         self.task_frame.pack(fill="both", expand=True)
-        self.load_task()
         if self.home_frame.winfo_exists():
             self.home_frame.pack_forget()
         if self.settings_frame.winfo_exists():
@@ -527,37 +572,50 @@ class PomodoroTimer:
             minutes, seconds = divmod(self.work_time if self.is_work_time else self.break_time, 60)
             self.timer_label.config(text="{:02d}:{:02d}".format(minutes, seconds))
             self.root.after(1000, self.update_timer)
-
+    
+    def load_tasks(self):
+        self.task_listbox.delete(0, tk.END)
+        tasks = get_tasks()
+        for task in tasks:
+            self.task_listbox.insert(tk.END, task[0]) 
 
     def add_task(self):
         task = self.task_entry.get()
-        if task:
-            self.task_listbox.insert(tk.END, task)
-            self.task_entry.delete(0, tk.END)
-        else:
-            messagebox.showwarning("Warning", "Please enter a task!")
-        self.load_task()
-    def load_task(self):
-        self.task_listbox.delete(0, tk.END)
-        tasks = get_tasks(self.username)
-        for task in tasks:
-            self.task_listbox.insert(tk.END, task)
-    def remove_task(self):
+        work_time = int(self.work_task_entry.get()) * 60
+        short_break_time = int(self.short_break_task_entry.get()) * 60
+        long_break_time = int(self.long_break_task_entry.get()) * 60
+        save_task(task, work_time, short_break_time, long_break_time)
+        messagebox.showinfo("Success", "Task saved successfully!")
+        self.load_tasks()
+    def delete_task(self):
         try:
-            selected_task_index = self.task_listbox.curselection()[0]
-            self.task_listbox.delete(selected_task_index)
-            if not self.task_listbox.size():  # Disable edit button if no tasks are left
-                self.edit_button.config(state=tk.DISABLED)
+            task_id = self.task_listbox.curselection()[0]
+            task_name = self.task_listbox.get(tk.ACTIVE)
+            confirmation = messagebox.askyesno("Delete Task", "Are you sure you want to delete this task?")
+            if confirmation:
+                delete_task(task_id, task_name)
+                messagebox.showinfo("Task Deleted", "The task has been deleted successfully.")
         except IndexError:
-            messagebox.showwarning("Warning", "Please select a task to remove!")
-        self.load_task()
+            messagebox.showwarning("No Selection", "Please select a task to delete.")
+        self.load_tasks()  
+
 
     def edit_task_timer(self):
         if not self.task_listbox.curselection():
             messagebox.showwarning("Warning", "Please select a task to edit!")
             return
-        
+        task_id = self.task_listbox.curselection()[0]
+        task_name = self.task_listbox.get(task_id)
+        tasks = get_tasks()
+        for task in tasks:
+            if task[0] == task_name:
+                work_time = task[1]
+                short_break_time = task[2]
+                long_break_time = task[3]
+                break
+
         self.edit_window = tk.Toplevel(self.root)
+        self.edit_window.configure(background='#BA4949')
         self.edit_window.title("Edit Timer Settings")
 
 
@@ -570,20 +628,25 @@ class PomodoroTimer:
         
         self.edit_window.geometry(f'{window_width}x{window_height}+{position_right}+{position_top}')
         
-        tk.Label(self.edit_window, text="Work Time (minutes):").pack(pady=5)
+        ttk.Label(self.edit_window, text="Work Time (minutes):").pack(pady=5)
         self.work_time_entry = tk.Entry(self.edit_window)
         self.work_time_entry.pack(pady=5)
-        self.work_time_entry.insert(0, str(WORK_TIME // 60))
+        self.work_time_entry.insert(0, str(work_time // 60))
         
-        tk.Label(self.edit_window, text="Short Break Time (minutes):").pack(pady=5)
+        ttk.Label(self.edit_window, text="Short Break Time (minutes):").pack(pady=5)
         self.short_break_time_entry = tk.Entry(self.edit_window)
         self.short_break_time_entry.pack(pady=5)
-        self.short_break_time_entry.insert(0, str(SHORT_BREAK_TIME // 60))
+        self.short_break_time_entry.insert(0, str(short_break_time// 60))
         
-        tk.Label(self.edit_window, text="Long Break Time (minutes):").pack(pady=5)
+        ttk.Label(self.edit_window, text="Long Break Time (minutes):").pack(pady=5)
         self.long_break_time_entry = tk.Entry(self.edit_window)
         self.long_break_time_entry.pack(pady=5)
-        self.long_break_time_entry.insert(0, str(LONG_BREAK_TIME // 60))
+        self.long_break_time_entry.insert(0, str(long_break_time // 60))
+
+        ttk.Label(self.edit_window, text="Task Name:").pack(pady=5)
+        self.task_entry = tk.Entry(self.edit_window)
+        self.task_entry.pack(pady=5)
+        self.task_entry.insert(0, task_name)
         
         ttk.Button(self.edit_window, text="Save", command=self.save_timer_settings).pack(pady=20)
 
@@ -593,13 +656,17 @@ class PomodoroTimer:
             WORK_TIME = int(self.work_time_entry.get()) * 60
             SHORT_BREAK_TIME = int(self.short_break_time_entry.get()) * 60
             LONG_BREAK_TIME = int(self.long_break_time_entry.get()) * 60
+            task_name = self.task_entry.get()
             self.work_time = WORK_TIME
-            self.break_time = SHORT_BREAK_TIME
+            self.short_break_time = SHORT_BREAK_TIME
+            self.long_break_time = LONG_BREAK_TIME
+            update_task(task_name, WORK_TIME, SHORT_BREAK_TIME, LONG_BREAK_TIME)
+            self.load_tasks
             self.update_timer_label()
             self.edit_window.destroy()
+            messagebox.showinfo("Task Updated", "Tasks successfully updated!")
         except ValueError:
             messagebox.showwarning("Invalid input", "Please enter valid integer values for the times.")
-        self.load_task()
     
     def update_timer_label(self):
         minutes, seconds = divmod(self.work_time, 60)
